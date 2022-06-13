@@ -1,0 +1,11 @@
+<resources>
+	<string name="app_name">Location Collector</string>
+	<string name="OpenSwitch">Start collecting</string>
+	<string name="text_content">Location collector</string>
+	<string name="button_text">Test server available</string>
+	<string name="editText_text">Type ip and port</string>
+	<string name="checkStringFailed_text">No port number is found.</string>
+	<string name="editText_setTime">Setup time interval</string>
+	<string name="button_setup">setup</string>
+	<string name="editText_setTime_noInput">Number needed!</string>
+</resources>

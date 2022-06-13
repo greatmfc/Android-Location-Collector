@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">位置信息收集程序</string>
+    <string name="OpenSwitch">开始收集导航数据</string>
+    <string name="text_content">位置信息收集小程序</string>
+    <string name="button_text">测试服务器连通性</string>
+    <string name="editText_text">请输入IP地址及端口</string>
+    <string name="checkStringFailed_text">没有输入端口号</string>
+    <string name="editText_setTime">设置收集时间间隔</string>
+    <string name="button_setup">设置</string>
+	<string name="editText_setTime_noInput">请输入数值</string>
+</resources>
