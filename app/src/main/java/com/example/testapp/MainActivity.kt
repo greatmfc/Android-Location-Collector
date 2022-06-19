@@ -142,17 +142,37 @@ class MainActivity : AppCompatActivity() {
 									}
 									break
 								}
-								sendData(getLocationInfo())
 								delay(timeInterval)
+								sendData(getLocationInfo())
 							}
 							catch (a:SocketException){
+								val exceptionMessage=a.message.toString()
+								Log.e("MainActivity",exceptionMessage)
+								if(exceptionMessage=="Broken pipe" ||
+									exceptionMessage=="Connection reset") {
+									withContext(Dispatchers.Main) {
+										AlertDialog.Builder(context).apply {
+											setTitle("连接失败")
+											setMessage(a.toString())
+											setCancelable(false)
+											setNegativeButton("OK") { _, _ -> }
+											show()
+										}
+										alreadyConnectToServer = false
+										keepRunning = false
+										binding.textView.text = "未连接"
+										binding.switch1.toggle()
+									}
+									break
+								}
+								if(!keepRunning) break
 								var reConnectTimes=5
 								while (reConnectTimes>0) try {
 									communicationDescriptor = Socket(ip, port)
 									writeStream = communicationDescriptor?.getOutputStream()
 									break
 								}
-								catch (c:SocketException){
+								catch (d:SocketException){
 									delay(1000)
 									reConnectTimes--
 									Log.e("MainActivity","尝试重连中")
@@ -160,7 +180,7 @@ class MainActivity : AppCompatActivity() {
 										withContext(Dispatchers.Main){
 											AlertDialog.Builder(context).apply {
 												setTitle("连接失败")
-												setMessage(a.toString())
+												setMessage(d.toString())
 												setCancelable(false)
 												setNegativeButton("OK"){ _, _ ->}
 												show()
