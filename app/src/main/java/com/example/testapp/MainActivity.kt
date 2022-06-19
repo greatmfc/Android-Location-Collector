@@ -212,7 +212,9 @@ class MainActivity : AppCompatActivity() {
 				writeStream?.close()
 				alreadyConnectToServer=false
 				keepRunning=false
-				binding.switch1.toggle()
+				if(binding.switch1.isChecked){
+					binding.switch1.toggle()
+				}
 				Toast.makeText(this,"已关闭连接！",Toast.LENGTH_SHORT).show()
 				binding.textView.text = "未连接"
 			}
