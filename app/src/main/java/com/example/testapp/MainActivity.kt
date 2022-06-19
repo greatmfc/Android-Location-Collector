@@ -17,6 +17,7 @@ import androidx.core.content.ContextCompat
 import com.example.testapp.databinding.ActivityMainBinding
 import kotlinx.coroutines.*
 import java.io.OutputStream
+import java.net.SocketException
 import kotlin.Exception
 import kotlin.concurrent.thread
 import java.net.Socket as Socket
@@ -39,7 +40,9 @@ class MainActivity : AppCompatActivity() {
 	private val permissionList= listOf(
 		android.Manifest.permission.INTERNET,
 		android.Manifest.permission.ACCESS_FINE_LOCATION,
-		android.Manifest.permission.ACCESS_COARSE_LOCATION)
+		android.Manifest.permission.ACCESS_COARSE_LOCATION,
+		android.Manifest.permission.ACCESS_BACKGROUND_LOCATION,
+	)
 	companion object {
 		const val LOCATION_REQUEST_CODE = 1
 		const val LISTENER_REQUEST_CODE = 2
@@ -124,26 +127,37 @@ class MainActivity : AppCompatActivity() {
 					keepRunning=true
 					CoroutineScope(Dispatchers.IO).launch {
 						while (keepRunning){
-							//Toast.makeText(context, tempString, Toast.LENGTH_SHORT).show()
 							try {
 								sendData(getLocationInfo())
 								delay(timeInterval)
 							}
-							catch (e:Exception){
-								withContext(Dispatchers.Main){
-									AlertDialog.Builder(context).apply {
-										setTitle("连接失败")
-										setMessage(e.toString())
-										setCancelable(false)
-										setNegativeButton("OK"){ _, _ ->}
-										show()
-									}
-									alreadyConnectToServer=false
-									keepRunning=false
-									binding.textView.text = "未连接"
-									binding.switch1.toggle()
+							catch (a:SocketException){
+								var reConnectTimes=5
+								while (reConnectTimes>0) try {
+									communicationDescriptor = Socket(ip, port)
+									writeStream = communicationDescriptor?.getOutputStream()
+									break
 								}
-								break
+								catch (c:SocketException){
+									delay(1000)
+									reConnectTimes--
+									Log.e("MainActivity","尝试重连中")
+									if (reConnectTimes==0){
+										withContext(Dispatchers.Main){
+											AlertDialog.Builder(context).apply {
+												setTitle("连接失败")
+												setMessage(a.toString())
+												setCancelable(false)
+												setNegativeButton("OK"){ _, _ ->}
+												show()
+											}
+											alreadyConnectToServer=false
+											keepRunning=false
+											binding.textView.text = "未连接"
+											binding.switch1.toggle()
+										}
+									}
+								}
 							}
 						}
 					}
@@ -163,6 +177,8 @@ class MainActivity : AppCompatActivity() {
 				communicationDescriptor?.close()
 				writeStream?.close()
 				alreadyConnectToServer=false
+				keepRunning=false
+				binding.switch1.toggle()
 				Toast.makeText(this,"已关闭连接！",Toast.LENGTH_SHORT).show()
 				binding.textView.text = "未连接"
 			}
@@ -222,6 +238,7 @@ class MainActivity : AppCompatActivity() {
 		}
 		else{
 			finish()
+			onDestroy()
 		}
 	}
 
@@ -299,15 +316,15 @@ class MainActivity : AppCompatActivity() {
 					//没有获取到的权限则添加进去
 				}
 			}
-			if (requestPermissionList.size > 0) {
+			return if (requestPermissionList.size > 0) {
 				ActivityCompat.requestPermissions(
 					context as Activity,
 					requestPermissionList.toTypedArray(),
 					requestCode
 				)
-				return false
+				false
 			} else {
-				return true
+				true
 			}
 		}
 
