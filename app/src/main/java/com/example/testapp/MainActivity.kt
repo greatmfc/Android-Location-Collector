@@ -128,6 +128,20 @@ class MainActivity : AppCompatActivity() {
 					CoroutineScope(Dispatchers.IO).launch {
 						while (keepRunning){
 							try {
+								if(!isLocationServiceOpen()){
+									withContext(Dispatchers.Main){
+										AlertDialog.Builder(context).apply {
+											setTitle("连接失败")
+											setMessage("请打开定位服务！")
+											setCancelable(false)
+											setNegativeButton("OK"){ _, _ ->}
+											show()
+										}
+										keepRunning=false
+										binding.switch1.toggle()
+									}
+									break
+								}
 								sendData(getLocationInfo())
 								delay(timeInterval)
 							}
@@ -293,11 +307,12 @@ class MainActivity : AppCompatActivity() {
 				for (provider in locationManager.getProviders(true)) {
 					locationMonitor(provider)
 				}
-				returnString="No located present"
 				Log.i("MainActivity", "getLocationInfo: 获取到的经纬度均为空，已开启连续定位监听")
+				return "No located present"
 			}
 		} else {
 			Log.e("MainActivity","请跳转到系统设置中打开定位服务")
+			return "No located present"
 		}
 		return returnString
 	}
