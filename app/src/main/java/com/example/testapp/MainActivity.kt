@@ -246,6 +246,27 @@ class MainActivity : AppCompatActivity() {
 				Toast.makeText(this,"请先开启一个连接",Toast.LENGTH_SHORT).show()
 			}
 		}
+
+		binding.buttonSendText.setOnClickListener {
+			if(alreadyConnectToServer){
+				if(this.binding.editTextTextWantToSend.text.toString()==""){
+					Toast.makeText(this, "请输入要发送的文本！", Toast.LENGTH_SHORT).show()
+				}
+				else{
+					val tmp="${SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+						.format(Date())} ${this.binding.editTextTextWantToSend.text} " +
+							getLocationInfo()
+					CoroutineScope(Dispatchers.IO).launch {
+						sendData(tmp)
+					}
+					this.binding.editTextTextWantToSend.setText("")
+					Toast.makeText(this,"发送成功！",Toast.LENGTH_SHORT).show()
+				}
+			}
+			else{
+				Toast.makeText(this,"请先开启一个连接",Toast.LENGTH_SHORT).show()
+			}
+		}
 	}
 
 	override fun onDestroy() {
@@ -304,7 +325,6 @@ class MainActivity : AppCompatActivity() {
 
 	private fun sendData(targetString: String?){
 		val tmp= "g/$targetString"
-		//val messagesToSend=tmp.toByteArray()
 		writeStream?.write(tmp.toByteArray())
 	}
 

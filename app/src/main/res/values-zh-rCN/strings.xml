@@ -11,4 +11,6 @@
 	<string name="editText_setTime_noInput">请输入数值</string>
 	<string name="button_cacelConnection">取消已连接</string>
 	<string name="GPSContent">无</string>
+	<string name="button_sendText">发送文本</string>
+	<string name="editText_sendText">请输入要发送的文本</string>
 </resources>
