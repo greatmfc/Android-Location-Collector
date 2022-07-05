@@ -9,4 +9,5 @@
 	<string name="button_setup">setup</string>
 	<string name="editText_setTime_noInput">Number needed!</string>
 	<string name="button_cacelConnection">Cancel exist connection</string>
+	<string name="GPSContent">None.</string>
 </resources>

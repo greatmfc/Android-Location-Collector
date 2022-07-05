@@ -10,4 +10,5 @@
     <string name="button_setup">设置</string>
 	<string name="editText_setTime_noInput">请输入数值</string>
 	<string name="button_cacelConnection">取消已连接</string>
+	<string name="GPSContent">无</string>
 </resources>

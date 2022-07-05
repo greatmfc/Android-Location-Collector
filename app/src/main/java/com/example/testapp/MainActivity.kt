@@ -1,14 +1,17 @@
 package com.example.testapp
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
+import android.icu.text.SimpleDateFormat
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
 import android.os.Looper
 import android.util.Log
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -17,10 +20,10 @@ import androidx.core.content.ContextCompat
 import com.example.testapp.databinding.ActivityMainBinding
 import kotlinx.coroutines.*
 import java.io.OutputStream
+import java.net.Socket
 import java.net.SocketException
-import kotlin.Exception
+import java.util.*
 import kotlin.concurrent.thread
-import java.net.Socket as Socket
 
 class MainActivity : AppCompatActivity() {
 
@@ -88,6 +91,7 @@ class MainActivity : AppCompatActivity() {
 		}
 	}
 
+	@SuppressLint("SimpleDateFormat")
 	private fun initUI(){
 		binding.button1.setOnClickListener{
 			if (alreadyConnectToServer) {
@@ -100,6 +104,7 @@ class MainActivity : AppCompatActivity() {
 			}
 			this.binding.editText.setText("")
 		}
+
 		binding.buttonTimeSet.setOnClickListener {
 			if(this.binding.editTextNumber.text.toString()==""){
 				Toast.makeText(
@@ -120,6 +125,7 @@ class MainActivity : AppCompatActivity() {
 				this.binding.editTextNumber.setText("")
 			}
 		}
+
 		binding.switch1.setOnCheckedChangeListener { buttonView, isChecked ->
 			if(isChecked){
 				if(alreadyConnectToServer){
@@ -143,7 +149,15 @@ class MainActivity : AppCompatActivity() {
 									break
 								}
 								delay(timeInterval)
-								sendData(getLocationInfo())
+								var finalText=SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+									.format(Date())
+								finalText= "$finalText ${getLocationInfo()}"
+								sendData(finalText)
+								withContext(Dispatchers.Main){
+									binding.lastGPSContent.setAutoSizeTextTypeWithDefaults(TextView
+										.AUTO_SIZE_TEXT_TYPE_UNIFORM)
+									binding.lastGPSContent.text = finalText
+								}
 							}
 							catch (a:SocketException){
 								val exceptionMessage=a.message.toString()
@@ -158,10 +172,13 @@ class MainActivity : AppCompatActivity() {
 											setNegativeButton("OK") { _, _ -> }
 											show()
 										}
+										/*
 										alreadyConnectToServer = false
 										keepRunning = false
-										binding.textView.text = "未连接"
 										binding.switch1.toggle()
+										 */
+										setStatusOff()
+										binding.textView.text = "未连接"
 									}
 									break
 								}
@@ -185,10 +202,13 @@ class MainActivity : AppCompatActivity() {
 												setNegativeButton("OK"){ _, _ ->}
 												show()
 											}
+											setStatusOff()
+											binding.textView.text = "未连接"
+											/*
 											alreadyConnectToServer=false
 											keepRunning=false
-											binding.textView.text = "未连接"
 											binding.switch1.toggle()
+											 */
 										}
 									}
 								}
@@ -206,8 +226,10 @@ class MainActivity : AppCompatActivity() {
 				Toast.makeText(this,"已关闭！",Toast.LENGTH_SHORT).show()
 			}
 		}
+
 		binding.buttonCancelConnection.setOnClickListener {
 			if(alreadyConnectToServer){
+				/*
 				communicationDescriptor?.close()
 				writeStream?.close()
 				alreadyConnectToServer=false
@@ -215,6 +237,8 @@ class MainActivity : AppCompatActivity() {
 				if(binding.switch1.isChecked){
 					binding.switch1.toggle()
 				}
+				*/
+				setStatusOff()
 				Toast.makeText(this,"已关闭连接！",Toast.LENGTH_SHORT).show()
 				binding.textView.text = "未连接"
 			}
@@ -279,10 +303,9 @@ class MainActivity : AppCompatActivity() {
 	}
 
 	private fun sendData(targetString: String?){
-		val tmp= "m/$targetString"
-		val messagesToSend=tmp.toByteArray()
-		writeStream?.write(messagesToSend)
-		//writeStream?.flush()
+		val tmp= "g/$targetString"
+		//val messagesToSend=tmp.toByteArray()
+		writeStream?.write(tmp.toByteArray())
 	}
 
 	private fun isLocationServiceOpen(): Boolean {
@@ -322,7 +345,7 @@ class MainActivity : AppCompatActivity() {
 			}
 			betterLocation?.let {
 				Log.i("MainActivity", "精度最高的获取方式：${it.provider} 经度：${it.longitude}  纬度：${it.latitude}")
-				returnString="Latitude:${it.latitude}/Longitude:${it.longitude}"
+				returnString="[${it.latitude},${it.longitude}]"
 			}
 			//（四）若所支持的provider获取到的位置均为空，则开启连续定位服务
 			if (betterLocation == null) {
@@ -334,7 +357,7 @@ class MainActivity : AppCompatActivity() {
 			}
 		} else {
 			Log.e("MainActivity","请跳转到系统设置中打开定位服务")
-			return "No located present"
+			return "No location present"
 		}
 		return returnString
 	}
@@ -380,6 +403,7 @@ class MainActivity : AppCompatActivity() {
 			}
 		}
 	}
+
 	private fun locationMonitor(provider: String) {
 		if (PermissionUtil.requestPermission(LISTENER_REQUEST_CODE,permissionList,this)) {
 			try {
@@ -397,6 +421,16 @@ class MainActivity : AppCompatActivity() {
 			catch (e:SecurityException){
 				Log.e("MainActivity","false")
 			}
+		}
+	}
+
+	private fun setStatusOff(){
+		communicationDescriptor?.close()
+		writeStream?.close()
+		alreadyConnectToServer=false
+		keepRunning=false
+		if(binding.switch1.isChecked){
+			binding.switch1.toggle()
 		}
 	}
 }
