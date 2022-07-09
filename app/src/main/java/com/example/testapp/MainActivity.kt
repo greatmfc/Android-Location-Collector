@@ -70,8 +70,9 @@ class MainActivity : AppCompatActivity() {
 		binding = ActivityMainBinding.inflate(layoutInflater)
 		setContentView(binding.root)
 		context=this
-		initUI()
 		PermissionUtil.requestPermission(LOCATION_REQUEST_CODE,permissionList,this)
+		getLocationInfo()
+		initUI()
 	}
 
 	override fun onRequestPermissionsResult(
@@ -172,11 +173,6 @@ class MainActivity : AppCompatActivity() {
 											setNegativeButton("OK") { _, _ -> }
 											show()
 										}
-										/*
-										alreadyConnectToServer = false
-										keepRunning = false
-										binding.switch1.toggle()
-										 */
 										setStatusOff()
 										binding.textView.text = "未连接"
 									}
@@ -204,11 +200,6 @@ class MainActivity : AppCompatActivity() {
 											}
 											setStatusOff()
 											binding.textView.text = "未连接"
-											/*
-											alreadyConnectToServer=false
-											keepRunning=false
-											binding.switch1.toggle()
-											 */
 										}
 									}
 								}
@@ -229,15 +220,6 @@ class MainActivity : AppCompatActivity() {
 
 		binding.buttonCancelConnection.setOnClickListener {
 			if(alreadyConnectToServer){
-				/*
-				communicationDescriptor?.close()
-				writeStream?.close()
-				alreadyConnectToServer=false
-				keepRunning=false
-				if(binding.switch1.isChecked){
-					binding.switch1.toggle()
-				}
-				*/
 				setStatusOff()
 				Toast.makeText(this,"已关闭连接！",Toast.LENGTH_SHORT).show()
 				binding.textView.text = "未连接"
@@ -254,7 +236,7 @@ class MainActivity : AppCompatActivity() {
 				}
 				else{
 					val tmp="${SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
-						.format(Date())} ${this.binding.editTextTextWantToSend.text} " +
+						.format(Date())} (${this.binding.editTextTextWantToSend.text}) " +
 							getLocationInfo()
 					CoroutineScope(Dispatchers.IO).launch {
 						sendData(tmp)
@@ -319,7 +301,6 @@ class MainActivity : AppCompatActivity() {
 		}
 		else{
 			finish()
-			onDestroy()
 		}
 	}
 
@@ -373,7 +354,7 @@ class MainActivity : AppCompatActivity() {
 					locationMonitor(provider)
 				}
 				Log.i("MainActivity", "getLocationInfo: 获取到的经纬度均为空，已开启连续定位监听")
-				return "No located present"
+				return "No location present"
 			}
 		} else {
 			Log.e("MainActivity","请跳转到系统设置中打开定位服务")
