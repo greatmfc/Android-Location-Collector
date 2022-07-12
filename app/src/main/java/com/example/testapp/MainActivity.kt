@@ -317,7 +317,6 @@ class MainActivity : AppCompatActivity() {
 
 	private fun getLocationInfo() : String{
 		//判断是否开启位置服务，没有则跳转至设置来开启
-		var returnString=""
 		if (isLocationServiceOpen()) {
 			//获取所有支持的provider
 			val providers = locationManager.getProviders(true)
@@ -346,7 +345,7 @@ class MainActivity : AppCompatActivity() {
 			}
 			betterLocation?.let {
 				Log.i("MainActivity", "精度最高的获取方式：${it.provider} 经度：${it.longitude}  纬度：${it.latitude}")
-				returnString="[${it.latitude},${it.longitude}]"
+				return "[${it.latitude},${it.longitude}]"
 			}
 			//（四）若所支持的provider获取到的位置均为空，则开启连续定位服务
 			if (betterLocation == null) {
@@ -360,7 +359,7 @@ class MainActivity : AppCompatActivity() {
 			Log.e("MainActivity","请跳转到系统设置中打开定位服务")
 			return "No location present"
 		}
-		return returnString
+		return "No location present"
 	}
 
 	object PermissionUtil {
