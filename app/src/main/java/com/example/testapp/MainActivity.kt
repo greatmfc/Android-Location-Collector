@@ -9,7 +9,6 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
-import android.os.Looper
 import android.util.Log
 import android.widget.TextView
 import android.widget.Toast
@@ -23,7 +22,6 @@ import java.io.OutputStream
 import java.net.Socket
 import java.net.SocketException
 import java.util.*
-import kotlin.concurrent.thread
 
 class MainActivity : AppCompatActivity() {
 
@@ -50,17 +48,53 @@ class MainActivity : AppCompatActivity() {
 		const val LOCATION_REQUEST_CODE = 1
 		const val LISTENER_REQUEST_CODE = 2
 	}
-	private var locationListener: LocationListener = object : LocationListener {
+	private var gpsListener: LocationListener = object : LocationListener {
 		override fun onLocationChanged(location: Location) {
-			Log.i("MainActivity", "onLocationChanged: 经纬度发生变化")
+			Log.i("MainActivity", "onLocationChanged(${location.provider}): 经纬度发生变化")
 		}
 
 		override fun onProviderDisabled(provider: String) {
-			Log.i("MainActivity", "onProviderDisabled: ")
+			if(provider==LocationManager.GPS_PROVIDER){
+				CoroutineScope(Dispatchers.Main).launch {
+					AlertDialog.Builder(context).apply {
+						setTitle("获取失败")
+						setMessage("请打开定位服务开关！")
+						setCancelable(false)
+						setNegativeButton("OK"){ _, _ ->}
+						show()
+					}
+				}
+			}
+			Log.i("MainActivity", "onProviderDisabled: $provider")
 		}
 
 		override fun onProviderEnabled(provider: String) {
-			Log.i("MainActivity", "onProviderEnabled: ")
+			Log.i("MainActivity", "onProviderEnabled: $provider")
+		}
+	}
+
+	private var networkListener: LocationListener = object : LocationListener {
+		override fun onLocationChanged(location: Location) {
+			Log.i("MainActivity", "onLocationChanged(${location.provider}): 经纬度发生变化")
+		}
+
+		override fun onProviderDisabled(provider: String) {
+			if(provider==LocationManager.GPS_PROVIDER){
+				CoroutineScope(Dispatchers.Main).launch {
+					AlertDialog.Builder(context).apply {
+						setTitle("获取失败")
+						setMessage("请打开定位服务开关！")
+						setCancelable(false)
+						setNegativeButton("OK"){ _, _ ->}
+						show()
+					}
+				}
+			}
+			Log.i("MainActivity", "onProviderDisabled: $provider")
+		}
+
+		override fun onProviderEnabled(provider: String) {
+			Log.i("MainActivity", "onProviderEnabled: $provider")
 		}
 	}
 
@@ -71,8 +105,24 @@ class MainActivity : AppCompatActivity() {
 		setContentView(binding.root)
 		context=this
 		PermissionUtil.requestPermission(LOCATION_REQUEST_CODE,permissionList,this)
-		getLocationInfo()
+		locationMonitor(LocationManager.NETWORK_PROVIDER,networkListener)
+		locationMonitor(LocationManager.GPS_PROVIDER,gpsListener)
 		initUI()
+	}
+
+	override fun onPause() {
+		super.onPause()
+		Log.i("MainActivity", "onPause")
+	}
+
+	override fun onStop() {
+		super.onStop()
+		Log.i("MainActivity", "onStop")
+	}
+
+	override fun onRestart() {
+		super.onRestart()
+		Log.i("MainActivity", "onRestart")
 	}
 
 	override fun onRequestPermissionsResult(
@@ -137,13 +187,6 @@ class MainActivity : AppCompatActivity() {
 							try {
 								if(!isLocationServiceOpen()){
 									withContext(Dispatchers.Main){
-										AlertDialog.Builder(context).apply {
-											setTitle("连接失败")
-											setMessage("请打开定位服务！")
-											setCancelable(false)
-											setNegativeButton("OK"){ _, _ ->}
-											show()
-										}
 										keepRunning=false
 										binding.switch1.toggle()
 									}
@@ -192,7 +235,7 @@ class MainActivity : AppCompatActivity() {
 									if (reConnectTimes==0){
 										withContext(Dispatchers.Main){
 											AlertDialog.Builder(context).apply {
-												setTitle("连接失败")
+												setTitle("重连失败")
 												setMessage(d.toString())
 												setCancelable(false)
 												setNegativeButton("OK"){ _, _ ->}
@@ -214,6 +257,7 @@ class MainActivity : AppCompatActivity() {
 			}
 			else{
 				keepRunning=false
+				CoroutineScope(Dispatchers.IO).cancel()
 				Toast.makeText(this,"已关闭！",Toast.LENGTH_SHORT).show()
 			}
 		}
@@ -221,6 +265,7 @@ class MainActivity : AppCompatActivity() {
 		binding.buttonCancelConnection.setOnClickListener {
 			if(alreadyConnectToServer){
 				setStatusOff()
+				CoroutineScope(Dispatchers.IO).cancel()
 				Toast.makeText(this,"已关闭连接！",Toast.LENGTH_SHORT).show()
 				binding.textView.text = "未连接"
 			}
@@ -230,19 +275,34 @@ class MainActivity : AppCompatActivity() {
 		}
 
 		binding.buttonSendText.setOnClickListener {
-			if(alreadyConnectToServer){
-				if(this.binding.editTextTextWantToSend.text.toString()==""){
+			if(alreadyConnectToServer) {
+				if(this.binding.editTextTextWantToSend.text.toString()=="") {
 					Toast.makeText(this, "请输入要发送的文本！", Toast.LENGTH_SHORT).show()
 				}
 				else{
 					val tmp="${SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
 						.format(Date())} (${this.binding.editTextTextWantToSend.text}) " +
 							getLocationInfo()
-					CoroutineScope(Dispatchers.IO).launch {
-						sendData(tmp)
-					}
 					this.binding.editTextTextWantToSend.setText("")
-					Toast.makeText(this,"发送成功！",Toast.LENGTH_SHORT).show()
+					CoroutineScope(Dispatchers.Main).launch {
+						try {
+							withContext(Dispatchers.IO){
+								sendData(tmp)
+							}
+							Toast.makeText(context,"发送成功！",Toast.LENGTH_SHORT).show()
+						} catch (e:Exception) {
+							Log.e("MainActivity", e.toString())
+							AlertDialog.Builder(context).apply {
+								setTitle("发送失败")
+								setMessage(e.toString())
+								setCancelable(false)
+								setNegativeButton("OK"){ _, _ ->}
+								show()
+							}
+							setStatusOff()
+							binding.textView.text = "未连接"
+						}
+					}
 				}
 			}
 			else{
@@ -257,6 +317,8 @@ class MainActivity : AppCompatActivity() {
 			writeStream?.close()
 			communicationDescriptor?.close()
 		}
+		locationManager.removeUpdates(gpsListener)
+		locationManager.removeUpdates(networkListener)
 	}
 
 	private fun checkAddressAvailable(addr: String?) {
@@ -300,19 +362,23 @@ class MainActivity : AppCompatActivity() {
 			lastPressedTime=System.currentTimeMillis()
 		}
 		else{
+			if(alreadyConnectToServer){
+				writeStream?.close()
+				communicationDescriptor?.close()
+			}
 			finish()
 		}
 	}
 
 	private fun sendData(targetString: String?){
-		val tmp= "g/$targetString"
+		val tmp= "n/$targetString"
 		writeStream?.write(tmp.toByteArray())
 	}
 
 	private fun isLocationServiceOpen(): Boolean {
 		val gps = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
 		val network = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
-		return gps || network
+		return gps && network
 	}
 
 	private fun getLocationInfo() : String{
@@ -349,15 +415,10 @@ class MainActivity : AppCompatActivity() {
 			}
 			//（四）若所支持的provider获取到的位置均为空，则开启连续定位服务
 			if (betterLocation == null) {
-				for (provider in locationManager.getProviders(true)) {
-					locationMonitor(provider)
-				}
 				Log.i("MainActivity", "getLocationInfo: 获取到的经纬度均为空，已开启连续定位监听")
-				return "No location present"
 			}
 		} else {
 			Log.e("MainActivity","请跳转到系统设置中打开定位服务")
-			return "No location present"
 		}
 		return "No location present"
 	}
@@ -404,23 +465,23 @@ class MainActivity : AppCompatActivity() {
 		}
 	}
 
-	private fun locationMonitor(provider: String) {
+	private fun locationMonitor(provider: String, listener: LocationListener) {
 		if (PermissionUtil.requestPermission(LISTENER_REQUEST_CODE,permissionList,this)) {
 			try {
-				thread {
-					Looper.prepare()
-					locationManager.requestLocationUpdates(
-						provider,
-						60000.toLong(),        //超过1分钟则更新位置信息
-						8.toFloat(),        //位置超过8米则更新位置信息
-						locationListener
-					)
-					Looper.loop()
-				}
+				locationManager.requestLocationUpdates(
+					provider,
+					10000.toLong(),        //超过15秒钟则更新位置信息
+					1.toFloat(),        //位置超过1米则更新位置信息
+					listener
+				)
+				Log.i("MainActivity","locationMonitor of $provider")
 			}
 			catch (e:SecurityException){
 				Log.e("MainActivity","false")
 			}
+		}
+		else{
+			Toast.makeText(this, "监听失败", Toast.LENGTH_SHORT).show()
 		}
 	}
 
