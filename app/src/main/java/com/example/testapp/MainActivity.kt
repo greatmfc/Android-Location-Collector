@@ -3,6 +3,7 @@ package com.example.testapp
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.icu.text.SimpleDateFormat
 import android.location.Location
@@ -10,6 +11,8 @@ import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
 import android.util.Log
+import android.view.Menu
+import android.view.MenuItem
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -17,8 +20,11 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.example.testapp.databinding.ActivityMainBinding
+import com.huawei.hms.hmsscankit.ScanUtil
+import com.huawei.hms.ml.scan.HmsScan
+import com.huawei.hms.ml.scan.HmsScanAnalyzerOptions
 import kotlinx.coroutines.*
-import java.io.OutputStream
+import java.io.*
 import java.net.Socket
 import java.net.SocketException
 import java.util.*
@@ -47,6 +53,7 @@ class MainActivity : AppCompatActivity() {
 	companion object {
 		const val LOCATION_REQUEST_CODE = 1
 		const val LISTENER_REQUEST_CODE = 2
+		const val CAMERA_REQUEST_CODE = 3
 	}
 	private var gpsListener: LocationListener = object : LocationListener {
 		override fun onLocationChanged(location: Location) {
@@ -110,21 +117,6 @@ class MainActivity : AppCompatActivity() {
 		initUI()
 	}
 
-	override fun onPause() {
-		super.onPause()
-		Log.i("MainActivity", "onPause")
-	}
-
-	override fun onStop() {
-		super.onStop()
-		Log.i("MainActivity", "onStop")
-	}
-
-	override fun onRestart() {
-		super.onRestart()
-		Log.i("MainActivity", "onRestart")
-	}
-
 	override fun onRequestPermissionsResult(
 		requestCode: Int,
 		permissions: Array<out String>,
@@ -138,6 +130,10 @@ class MainActivity : AppCompatActivity() {
 				} else {
 					Toast.makeText(this, "没有权限", Toast.LENGTH_SHORT).show()
 				}
+			}
+			CAMERA_REQUEST_CODE->{
+				ScanUtil.startScan(this,0x01,HmsScanAnalyzerOptions.Creator().setHmsScanTypes
+					(HmsScan.ALL_SCAN_TYPE).create())
 			}
 		}
 	}
@@ -494,4 +490,91 @@ class MainActivity : AppCompatActivity() {
 			binding.switch1.toggle()
 		}
 	}
+
+	override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+		menuInflater.inflate(R.menu.main,menu)
+		return true
+	}
+
+	override fun onOptionsItemSelected(item: MenuItem): Boolean {
+		when(item.itemId){
+			R.id.startScan->
+				ActivityCompat.requestPermissions(this,
+					arrayOf<String?>(android.Manifest.permission.CAMERA,
+					android.Manifest.permission.READ_EXTERNAL_STORAGE), CAMERA_REQUEST_CODE)
+			R.id.startUpdate->{
+				if(alreadyConnectToServer){
+					CoroutineScope(Dispatchers.IO).launch {
+						try {
+							writeStream?.write("u/${context.packageManager.getPackageInfo(context
+								.packageName,0).versionName}"
+								.toByteArray())
+							val buffer=communicationDescriptor?.getInputStream()
+							val output=openFileOutput("file",Context.MODE_PRIVATE)
+							buffer.use {
+								it?.read()?.let { it1 -> output.write(it1) }
+							}
+						}
+						catch (e:Exception){
+							withContext(Dispatchers.Main){
+								Toast.makeText(context, e.message, Toast.LENGTH_SHORT).show()
+							}
+						}
+					}
+				}
+				else{
+					Toast.makeText(this, "请先连接到服务器！", Toast.LENGTH_SHORT).show()
+				}
+			}
+			R.id.about->{
+				AlertDialog.Builder(context).apply {
+					setTitle("About")
+					setMessage("Android Location Collector\n" +
+							"Developed by greatmfc.")
+					setCancelable(false)
+					setNegativeButton("OK"){ _, _ ->}
+					show()
+				}
+			}
+		}
+		return true
+	}
+
+	@SuppressLint("SimpleDateFormat")
+	@Deprecated("Deprecated in Java")
+	override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+		super.onActivityResult(requestCode, resultCode, data)
+		if (resultCode != RESULT_OK || data == null) {
+			Toast.makeText(this, "No available data detected!", Toast.LENGTH_SHORT).show()
+			return
+		}
+		if (requestCode == 0x01) {
+			val obj: HmsScan? = data.getParcelableExtra(ScanUtil.RESULT)
+			if (obj != null && obj.originalValue[0]=='/') {
+				if(alreadyConnectToServer){
+					val tmp="${SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+						.format(Date())} (${obj.originalValue.substringAfter('/')}) " +
+							getLocationInfo()
+					CoroutineScope(Dispatchers.IO).launch {
+						try {
+							sendData(tmp)
+						}
+						catch (e:Exception){
+							withContext(Dispatchers.Main){
+								Toast.makeText(context, e.message, Toast.LENGTH_SHORT).show()
+							}
+						}
+					}
+					Toast.makeText(this, "发送成功！", Toast.LENGTH_SHORT).show()
+				}
+				else{
+					Toast.makeText(this, "请先连接到服务器！", Toast.LENGTH_SHORT).show()
+				}
+			}
+			else{
+				Toast.makeText(this, "无效地点请重新扫描！", Toast.LENGTH_SHORT).show()
+			}
+		}
+	}
+
 }

@@ -12,4 +12,7 @@
 	<string name="GPSContent">None.</string>
 	<string name="button_sendText">send text</string>
 	<string name="editText_sendText">Type some text</string>
+	<string name="menuScan">Scan</string>
+	<string name="menuUpdate">Update</string>
+	<string name="menuAbout">About</string>
 </resources>

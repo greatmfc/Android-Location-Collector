@@ -13,4 +13,7 @@
 	<string name="GPSContent">无</string>
 	<string name="button_sendText">发送文本</string>
 	<string name="editText_sendText">请输入要发送的文本</string>
+	<string name="menuScan">扫码</string>
+	<string name="menuUpdate">升级程序</string>
+	<string name="menuAbout">关于</string>
 </resources>
