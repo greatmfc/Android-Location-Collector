@@ -1,4 +1,4 @@
-package com.example.testapp.ui.notifications
+package com.example.LocationCollector.ui.notifications
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData

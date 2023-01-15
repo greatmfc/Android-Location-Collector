@@ -4,6 +4,9 @@
 		android:id="@+id/startScan"
 		android:title="@string/menuScan"/>
 	<item
+		android:id="@+id/sft"
+		android:title="@string/menuSft"/>
+	<item
 		android:id="@+id/startUpdate"
 		android:title="@string/menuUpdate"/>
 	<item

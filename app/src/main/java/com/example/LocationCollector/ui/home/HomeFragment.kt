@@ -1,4 +1,4 @@
-package com.example.testapp.ui.home
+package com.example.LocationCollector.ui.home
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -7,7 +7,7 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
-import com.example.testapp.databinding.FragmentHomeBinding
+import com.example.LocationCollector.databinding.FragmentHomeBinding
 
 class HomeFragment : Fragment() {
 

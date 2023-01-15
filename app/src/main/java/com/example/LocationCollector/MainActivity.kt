@@ -1,4 +1,4 @@
-package com.example.testapp
+package com.example.LocationCollector
 
 import android.annotation.SuppressLint
 import android.app.Activity
@@ -19,7 +19,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.example.testapp.databinding.ActivityMainBinding
+import com.example.LocationCollector.databinding.ActivityMainBinding
 import com.huawei.hms.hmsscankit.ScanUtil
 import com.huawei.hms.ml.scan.HmsScan
 import com.huawei.hms.ml.scan.HmsScanAnalyzerOptions
@@ -33,27 +33,30 @@ class MainActivity : AppCompatActivity() {
 
 	private lateinit var binding: ActivityMainBinding
 
-	private var ip: String? = null
-	private var port: Int = 0
-	private var alreadyConnectToServer: Boolean = false
-	private var communicationDescriptor: Socket? = null
-	private var writeStream: OutputStream? = null
 	private var timeInterval: Long = 5000
 	private val timeToQuitInterval:Int=2000
 	private var lastPressedTime:Long=0
 	private var keepRunning:Boolean=true
 	private lateinit var context: Context
 	private lateinit var locationManager:LocationManager
+	var isConnected: Boolean = false
+	var communicationDescriptor: Socket? = null
+	var writeStream: OutputStream? = null
 	private val permissionList= listOf(
 		android.Manifest.permission.INTERNET,
 		android.Manifest.permission.ACCESS_FINE_LOCATION,
 		android.Manifest.permission.ACCESS_COARSE_LOCATION,
 		android.Manifest.permission.ACCESS_BACKGROUND_LOCATION,
+		android.Manifest.permission.READ_EXTERNAL_STORAGE,
+		android.Manifest.permission.WRITE_EXTERNAL_STORAGE,
+		//android.Manifest.permission.MANAGE_EXTERNAL_STORAGE
 	)
 	companion object {
 		const val LOCATION_REQUEST_CODE = 1
 		const val LISTENER_REQUEST_CODE = 2
 		const val CAMERA_REQUEST_CODE = 3
+		var ip: String? = null
+		var port: Int = 0
 	}
 	private var gpsListener: LocationListener = object : LocationListener {
 		override fun onLocationChanged(location: Location) {
@@ -128,7 +131,7 @@ class MainActivity : AppCompatActivity() {
 				if (PermissionUtil.verifyResult(grantResults, this)) {
 					getLocationInfo()
 				} else {
-					Toast.makeText(this, "没有权限", Toast.LENGTH_SHORT).show()
+					Toast.makeText(this, "没有位置权限", Toast.LENGTH_SHORT).show()
 				}
 			}
 			CAMERA_REQUEST_CODE->{
@@ -141,7 +144,7 @@ class MainActivity : AppCompatActivity() {
 	@SuppressLint("SimpleDateFormat")
 	private fun initUI(){
 		binding.button1.setOnClickListener{
-			if (alreadyConnectToServer) {
+			if (isConnected) {
 				Toast.makeText(this,
 					"Already connecting to server!", Toast.LENGTH_SHORT)
 					.show()
@@ -175,7 +178,7 @@ class MainActivity : AppCompatActivity() {
 
 		binding.switch1.setOnCheckedChangeListener { buttonView, isChecked ->
 			if(isChecked){
-				if(alreadyConnectToServer){
+				if(isConnected){
 					Toast.makeText(this,"已开启！",Toast.LENGTH_SHORT).show()
 					keepRunning=true
 					CoroutineScope(Dispatchers.IO).launch {
@@ -259,7 +262,7 @@ class MainActivity : AppCompatActivity() {
 		}
 
 		binding.buttonCancelConnection.setOnClickListener {
-			if(alreadyConnectToServer){
+			if(isConnected){
 				setStatusOff()
 				CoroutineScope(Dispatchers.IO).cancel()
 				Toast.makeText(this,"已关闭连接！",Toast.LENGTH_SHORT).show()
@@ -271,7 +274,7 @@ class MainActivity : AppCompatActivity() {
 		}
 
 		binding.buttonSendText.setOnClickListener {
-			if(alreadyConnectToServer) {
+			if(isConnected) {
 				if(this.binding.editTextTextWantToSend.text.toString()=="") {
 					Toast.makeText(this, "请输入要发送的文本！", Toast.LENGTH_SHORT).show()
 				}
@@ -309,7 +312,7 @@ class MainActivity : AppCompatActivity() {
 
 	override fun onDestroy() {
 		super.onDestroy()
-		if(alreadyConnectToServer){
+		if(isConnected){
 			writeStream?.close()
 			communicationDescriptor?.close()
 		}
@@ -331,9 +334,9 @@ class MainActivity : AppCompatActivity() {
 				withContext(Dispatchers.IO) {
 					communicationDescriptor = Socket(ip, port)
 					writeStream = communicationDescriptor?.getOutputStream()
-					alreadyConnectToServer = true
+					isConnected = true
 				}
-				binding.textView.text = "已连接"
+				binding.textView.text = "服务器连接状态：已连接"
 				Toast.makeText(context,
 					"Success on connecting to server.", Toast
 						.LENGTH_SHORT)
@@ -358,7 +361,7 @@ class MainActivity : AppCompatActivity() {
 			lastPressedTime=System.currentTimeMillis()
 		}
 		else{
-			if(alreadyConnectToServer){
+			if(isConnected){
 				writeStream?.close()
 				communicationDescriptor?.close()
 			}
@@ -484,7 +487,7 @@ class MainActivity : AppCompatActivity() {
 	private fun setStatusOff(){
 		communicationDescriptor?.close()
 		writeStream?.close()
-		alreadyConnectToServer=false
+		isConnected=false
 		keepRunning=false
 		if(binding.switch1.isChecked){
 			binding.switch1.toggle()
@@ -503,7 +506,7 @@ class MainActivity : AppCompatActivity() {
 					arrayOf<String?>(android.Manifest.permission.CAMERA,
 					android.Manifest.permission.READ_EXTERNAL_STORAGE), CAMERA_REQUEST_CODE)
 			R.id.startUpdate->{
-				if(alreadyConnectToServer){
+				if(isConnected){
 					CoroutineScope(Dispatchers.IO).launch {
 						try {
 							writeStream?.write("u/${context.packageManager.getPackageInfo(context
@@ -536,6 +539,10 @@ class MainActivity : AppCompatActivity() {
 					show()
 				}
 			}
+			R.id.sft->{
+				val intent=Intent(this,SftActivity::class.java)
+				startActivity(intent)
+			}
 		}
 		return true
 	}
@@ -551,7 +558,7 @@ class MainActivity : AppCompatActivity() {
 		if (requestCode == 0x01) {
 			val obj: HmsScan? = data.getParcelableExtra(ScanUtil.RESULT)
 			if (obj != null && obj.originalValue[0]=='/') {
-				if(alreadyConnectToServer){
+				if(isConnected){
 					val tmp="${SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
 						.format(Date())} (${obj.originalValue.substringAfter('/')}) " +
 							getLocationInfo()

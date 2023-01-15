@@ -2,18 +2,24 @@
 <resources>
     <string name="app_name">位置信息收集程序</string>
     <string name="OpenSwitch">开始收集导航数据</string>
-    <string name="text_content">未连接</string>
+    <string name="text_content">服务器连接状态：未连接</string>
     <string name="button_text">测试服务器连通性</string>
     <string name="editText_text">请输入IP地址及端口</string>
     <string name="checkStringFailed_text">没有输入端口号</string>
-    <string name="editText_setTime">设置收集时间间隔</string>
+    <string name="editText_setTime">设置收集数据的时间间隔</string>
     <string name="button_setup">设置</string>
 	<string name="editText_setTime_noInput">请输入数值</string>
-	<string name="button_cacelConnection">取消已连接</string>
-	<string name="GPSContent">无</string>
+	<string name="button_cacelConnection">断开已连接的服务器</string>
+	<string name="GPSContent">已获取的GPS内容：无</string>
 	<string name="button_sendText">发送文本</string>
 	<string name="editText_sendText">请输入要发送的文本</string>
 	<string name="menuScan">扫码</string>
 	<string name="menuUpdate">升级程序</string>
 	<string name="menuAbout">关于</string>
+	<string name="menuSft">Sft</string>
+	<string name="file_to_get">要获取的文件</string>
+	<string name="get_file">获取文件</string>
+	<string name="send_file">选取文件并发送</string>
+	<string name="cancel_selected">取消已选</string>
+	<string name="file_chose_to_send">已选择的文件</string>
 </resources>

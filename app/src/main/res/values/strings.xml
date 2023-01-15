@@ -1,7 +1,7 @@
 <resources>
 	<string name="app_name">Location Collector</string>
 	<string name="OpenSwitch">Start collecting</string>
-	<string name="text_content">Not connected</string>
+	<string name="text_content">Server status: Not connected</string>
 	<string name="button_text">Test server available</string>
 	<string name="editText_text">Type ip and port</string>
 	<string name="checkStringFailed_text">No port number is found.</string>
@@ -9,10 +9,16 @@
 	<string name="button_setup">setup</string>
 	<string name="editText_setTime_noInput">Number needed!</string>
 	<string name="button_cacelConnection">Cancel exist connection</string>
-	<string name="GPSContent">None.</string>
+	<string name="GPSContent">GPS content: None.</string>
 	<string name="button_sendText">send text</string>
 	<string name="editText_sendText">Type some text</string>
 	<string name="menuScan">Scan</string>
 	<string name="menuUpdate">Update</string>
 	<string name="menuAbout">About</string>
+	<string name="menuSft">Sft</string>
+	<string name="file_to_get">File To Get</string>
+	<string name="get_file">Get File</string>
+	<string name="send_file">Send FIle</string>
+	<string name="file_chose_to_send">File Chose To Send</string>
+	<string name="cancel_selected">Cancel Selected</string>
 </resources>
