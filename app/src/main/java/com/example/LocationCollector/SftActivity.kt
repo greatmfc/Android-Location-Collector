@@ -16,6 +16,7 @@ import com.example.LocationCollector.databinding.ActivitySftBinding
 import kotlinx.coroutines.*
 import java.io.*
 import java.net.Socket
+import java.util.Arrays
 
 class SftActivity : AppCompatActivity() {
 	private lateinit var binding:ActivitySftBinding
@@ -25,6 +26,7 @@ class SftActivity : AppCompatActivity() {
 	private var connectDescriptor: Socket?=null
 	private var connectStream:OutputStream?=null
 	private var currentIsConnected=false
+	private val maxArraySize=200000000
 
 	private val requestDataLauncher = registerForActivityResult(ActivityResultContracts
 		.StartActivityForResult()){
@@ -104,14 +106,11 @@ class SftActivity : AppCompatActivity() {
 				throw IllegalArgumentException("Argument contains illegal character '/' .")
 			}
 			val requestMessage="g/$name"
-			//testConnection(MainActivity.ip,MainActivity.port)
 			if(!currentIsConnected){
 				throw RuntimeException("Server is not connected.")
 			}
 			CoroutineScope(Dispatchers.IO).launch {
 				try {
-					//connectDescriptor= Socket(MainActivity.ip,MainActivity.port)
-					//connectStream= connectDescriptor?.getOutputStream()
 					connectStream?.write(requestMessage.toByteArray())
 					val reader =
 						DataInputStream(connectDescriptor?.getInputStream())
@@ -125,24 +124,44 @@ class SftActivity : AppCompatActivity() {
 					Log.d("Sft", "$sizeOfFile")
 					if (messageGet[0] != '0') {
 						connectStream?.write("1".toByteArray())
-						delay(100)
-						val bufferForFile = ByteArray(sizeOfFile)
-						var ret=0
-						var bytesLeft:Int=sizeOfFile
-						while(true){
-							ret+=reader.read(bufferForFile,ret,bytesLeft)
-							//ret=reader.read(bufferForFile)
-							bytesLeft=sizeOfFile-ret
-							if(bytesLeft<=0) break
-						}
 						val parent = Environment.getExternalStorageDirectory().path.toString()
 						val child = "$parent/sft"
 						File(child).mkdirs()
 						val fileInstance = File("$child/$name")
 						fileInstance.createNewFile()
 						val outputFIleWriter = FileOutputStream(fileInstance)
-						outputFIleWriter.write(bufferForFile)
-						//outputFIleWriter.flush()
+						delay(100)
+						if(sizeOfFile < maxArraySize){
+							val bufferForFile = ByteArray(sizeOfFile)
+							var ret=0
+							var bytesLeft:Int=sizeOfFile
+							while(true){
+								ret+=reader.read(bufferForFile,ret,bytesLeft)
+								bytesLeft=sizeOfFile-ret
+								if(bytesLeft<=0) break
+							}
+							outputFIleWriter.write(bufferForFile)
+						}
+						else{
+							val bufferForFile = ByteArray(maxArraySize)
+							var ret=0
+							var bytesWritten=ret
+							while(true){
+								var currentReturn=0
+								while(ret<(maxArraySize-200000)) {
+									currentReturn=reader.read(bufferForFile, ret, maxArraySize-ret)
+									if (currentReturn<=0) break
+									ret+=currentReturn
+									if(ret+bytesWritten>=sizeOfFile) break
+								}
+								if(currentReturn<=0) break
+								outputFIleWriter.write(bufferForFile,0,ret)
+								bytesWritten+=ret
+								if(bytesWritten>=sizeOfFile) break
+								Arrays.fill(bufferForFile,0)
+								ret=0
+							}
+						}
 						outputFIleWriter.close()
 					}
 					withContext(Dispatchers.Main) {
@@ -168,6 +187,7 @@ class SftActivity : AppCompatActivity() {
 							show()
 						}
 					}
+					connectStream?.close()
 				}
 			}
 		}
@@ -194,17 +214,49 @@ class SftActivity : AppCompatActivity() {
 			val file=File(completePath)
 			Log.d("SftActivity",completePath)
 			val reader=BufferedInputStream(file.inputStream())
-			val buf= ByteArray(file.length().toInt())
-			reader.read(buf,0,file.length().toInt())
+			val fileSize=file.length().toInt()
+			var sizeOutOfBound=false
+			val buf:ByteArray
+			if(fileSize>maxArraySize){
+				buf=ByteArray(maxArraySize)
+				sizeOutOfBound=true
+			}
+			else {
+				buf = ByteArray(fileSize)
+			}
 			val preMessage="f/${file.name}/${file.length()}"
 			if(!currentIsConnected) throw RuntimeException("Server is not connected.")
 			CoroutineScope(Dispatchers.IO).launch{
-				connectStream?.write(preMessage.toByteArray())
-				connectDescriptor?.getInputStream()?.read()
-				connectStream?.write(buf)
-				withContext(Dispatchers.Main) {
-					Toast.makeText(context, "Send file to server success!", Toast.LENGTH_SHORT)
-						.show()
+				try {
+					connectStream?.write(preMessage.toByteArray())
+					connectDescriptor?.getInputStream()?.read()
+					var ret: Int
+					if (sizeOutOfBound) {
+						while (true) {
+							ret = reader.read(buf,0,maxArraySize)
+							if (ret <= 0) break
+							connectStream?.write(buf,0,ret)
+							Arrays.fill(buf, 0)
+						}
+					} else {
+						reader.read(buf)
+						connectStream?.write(buf)
+					}
+					withContext(Dispatchers.Main) {
+						Toast.makeText(context, "Send file to server success!", Toast.LENGTH_SHORT)
+							.show()
+					}
+				}
+				catch (e:Exception){
+					withContext(Dispatchers.Main) {
+						AlertDialog.Builder(context).apply {
+							setTitle("Error in file sending")
+							setMessage(e.toString())
+							setCancelable(false)
+							setNegativeButton("OK") { _, _ -> }
+							show()
+						}
+					}
 				}
 			}
 		}
