@@ -7,6 +7,8 @@ import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings
 import android.util.Log
+import android.view.View
+import android.view.WindowManager
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -16,7 +18,7 @@ import com.example.LocationCollector.databinding.ActivitySftBinding
 import kotlinx.coroutines.*
 import java.io.*
 import java.net.Socket
-import java.util.Arrays
+import java.util.*
 
 class SftActivity : AppCompatActivity() {
 	private lateinit var binding:ActivitySftBinding
@@ -56,6 +58,7 @@ class SftActivity : AppCompatActivity() {
 		context=this
 		initUI()
 		testConnection(MainActivity.ip,MainActivity.port)
+		window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 	}
 
 	override fun onDestroy() {
@@ -97,6 +100,7 @@ class SftActivity : AppCompatActivity() {
 			isFileChosen=false
 			binding.textFileToSend.text="File Chose To Send"
 		}
+		binding.progressBar.visibility=View.INVISIBLE
 	}
 
 	private fun toGetFile(name:String){
@@ -131,6 +135,9 @@ class SftActivity : AppCompatActivity() {
 						fileInstance.createNewFile()
 						val outputFIleWriter = FileOutputStream(fileInstance)
 						delay(100)
+						withContext(Dispatchers.Main) {
+							binding.progressBar.visibility = View.VISIBLE
+						}
 						if(sizeOfFile < maxArraySize){
 							val bufferForFile = ByteArray(sizeOfFile)
 							var ret=0
@@ -189,6 +196,9 @@ class SftActivity : AppCompatActivity() {
 					}
 					connectStream?.close()
 				}
+				withContext(Dispatchers.Main) {
+					binding.progressBar.visibility = View.INVISIBLE
+				}
 			}
 		}
 		catch (e:Exception) {
@@ -227,6 +237,9 @@ class SftActivity : AppCompatActivity() {
 			val preMessage="f/${file.name}/${file.length()}"
 			if(!currentIsConnected) throw RuntimeException("Server is not connected.")
 			CoroutineScope(Dispatchers.IO).launch{
+				withContext(Dispatchers.Main) {
+					binding.progressBar.visibility = View.VISIBLE
+				}
 				try {
 					connectStream?.write(preMessage.toByteArray())
 					connectDescriptor?.getInputStream()?.read()
@@ -257,6 +270,9 @@ class SftActivity : AppCompatActivity() {
 							show()
 						}
 					}
+				}
+				withContext(Dispatchers.Main) {
+					binding.progressBar.visibility = View.INVISIBLE
 				}
 			}
 		}
